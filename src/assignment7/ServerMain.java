@@ -6,7 +6,7 @@
  * Siva Manda
  * SM48525
  * 16480
- * Slip days used: <0>
+ * Slip days used: 1
  * Git URL: https://github.com/aaronachang/Project7
  * Fall 2016
  */
@@ -15,17 +15,19 @@ package assignment7;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Observable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServerMain extends Observable {
 	public static void main(String[] args) {
 		try {
 			new ServerMain().setUpNetworking();
 		} catch (Exception e) {
-			System.exit(0);
-			//e.printStackTrace();
+			//System.exit(0);
+			e.printStackTrace();
 		}
 	}
 
@@ -36,6 +38,7 @@ public class ServerMain extends Observable {
 			Socket clientSocket = serverSock.accept();
 			ClientObserver writer = new ClientObserver(clientSocket.getOutputStream());
 			Thread t = new Thread(new ClientHandler(clientSocket));
+
 			t.start();
 			this.addObserver(writer);
 			System.out.println("got a connection");
@@ -62,9 +65,18 @@ public class ServerMain extends Observable {
 					notifyObservers(message);
 				}
 			} catch (IOException e) {
-				System.exit(0);
-				//e.printStackTrace();
+				//System.exit(0);
+				e.printStackTrace();
 			}
 		}
+	}
+	private static AtomicInteger currentClient = new AtomicInteger(0);
+	public static int getClient() {
+		System.out.println("get" + currentClient);
+		return currentClient.get();
+	}
+	public static void setClient(int client) {
+		currentClient.set(client);
+		System.out.println("set" + client);
 	}
 }

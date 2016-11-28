@@ -1,7 +1,21 @@
+/* Chatroom ClientMain.java
+ * EE422C Project 7 submission by
+ * Aaron Chang
+ * AAC3434
+ * 16475
+ * Siva Manda
+ * SM48525
+ * 16480
+ * Slip days used: 1
+ * Git URL: https://github.com/aaronachang/Project7
+ * Fall 2016
+ */
 package assignment7;
 
 import java.io.*; 
 import java.net.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import javafx.application.Application; 
 import javafx.geometry.Insets; 
 import javafx.geometry.Pos; 
@@ -17,25 +31,50 @@ public class ClientMain extends Application {
 	private TextArea incoming;
 	private TextField outgoing;
 	private BufferedReader reader;
-	private PrintWriter writer;	
+	private PrintWriter writer;
+	private String sentString = "";
+	private String name = "";
+	private AtomicBoolean initial = new AtomicBoolean(true);
 	
 	class IncomingReader implements Runnable {
 		public void run() {
 			String message;
 			try {
 				while ((message = reader.readLine()) != null) {
-					incoming.appendText(message + "\n");
+					if (message.charAt(message.indexOf('>') + 2) == '@') {
+						synchronized(this) {
+							if (message.substring(message.indexOf('>') + 3, message.indexOf('>') + 3 + name.length()).equals(name)) {
+								String sender = message.substring(message.indexOf('<'), message.indexOf('>') + 1);
+								String pm = message.substring(message.indexOf('>') + 2, message.length());
+								incoming.appendText("From " + sender + ": " + pm + "\n");
+							} else if (message.equals(sentString)) {
+								incoming.appendText(message + "\n");
+							}
+						}
+					} else {
+						synchronized(this){
+							incoming.appendText(message + "\n");
+						}
+					}
+					sentString = "";
 				}
 			} catch (IOException ex) {
-				System.exit(0);
-				//ex.printStackTrace();
+				//System.exit(0);
+				ex.printStackTrace();
 			}
 		}
 	}
 
 	@Override // Override the start method in the Application class 
-	public void start(Stage primaryStage) throws Exception { 
+	public void start(Stage stage) throws Exception { 
 		// Panel p to hold the label and text field 
+		@SuppressWarnings("resource")
+		Socket sock = new Socket("127.0.0.1", 4242);
+		InputStreamReader streamReader = new InputStreamReader(sock.getInputStream());
+		reader = new BufferedReader(streamReader);
+		writer = new PrintWriter(sock.getOutputStream());
+		System.out.println("networking established");
+		
 		BorderPane paneForTextField = new BorderPane(); 
 		paneForTextField.setPadding(new Insets(5, 5, 5, 5)); 
 		paneForTextField.setStyle("-fx-border-color: green"); 
@@ -53,25 +92,27 @@ public class ClientMain extends Application {
 
 		// Create a scene and place it in the stage 
 		Scene scene = new Scene(mainPane, 450, 200); 
-		primaryStage.setTitle("Client"); // Set the stage title 
-		primaryStage.setScene(scene); // Place the scene in the stage 
-		primaryStage.show(); // Display the stage 
+		stage.setTitle("Client"); // Set the stage title 
+		stage.setScene(scene); // Place the scene in the stage
+		//this.stage = stage;
+		stage.show(); // Display the stage 
 		
-		@SuppressWarnings("resource")
-		Socket sock = new Socket("127.0.0.1", 4242);
-		InputStreamReader streamReader = new InputStreamReader(sock.getInputStream());
-		reader = new BufferedReader(streamReader);
-		writer = new PrintWriter(sock.getOutputStream());
-		System.out.println("networking established");
+		incoming.setText("Enter your name.\n");
+
 		Thread readerThread = new Thread(new IncomingReader());
 		readerThread.start();
 
 		outgoing.setOnAction(e -> { 
-			String input = outgoing.getText().trim(); 
-			writer.println(input);
+			if (initial.getAndSet(false)) {
+				name = outgoing.getText();
+				sentString = name + " just joined the chat room.";
+			} else {
+				sentString = "<" + name + "> "+ outgoing.getText();
+			}
+			writer.println(sentString);
 			writer.flush();
 			outgoing.setText("");
-			outgoing.requestFocus(); 
+			outgoing.requestFocus();
 		}); 
 	}
 	
