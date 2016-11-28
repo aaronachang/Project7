@@ -97,7 +97,7 @@ public class ClientMain extends Application {
 		//this.stage = stage;
 		stage.show(); // Display the stage 
 		
-		incoming.setText("Enter your name.\n");
+		incoming.setText("Enter a Username in the chat line above.\n");
 
 		Thread readerThread = new Thread(new IncomingReader());
 		readerThread.start();
@@ -107,7 +107,7 @@ public class ClientMain extends Application {
 				name = outgoing.getText();
 				sentString = name + " just joined the chat room.";
 			} else {
-				sentString = "<" + name + "> "+ outgoing.getText();
+				sentString = "[" + name + "]: "+ outgoing.getText();
 			}
 			writer.println(sentString);
 			writer.flush();
