@@ -13,7 +13,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane; 
 import javafx.stage.Stage; 
 
-public class Client extends Application { 
+public class ClientMain extends Application { 
 	private TextArea incoming;
 	private TextField outgoing;
 	private BufferedReader reader;
