@@ -81,6 +81,38 @@ public class ClientMain extends Application {
 		 * Maybe leave button to exit chat room 
 		 * Multicoloring of different chat text
 		 * 
+		 * Pseudocode for user login:
+		 * Ideally want a login window to display first before chat window
+		 * Prompt Username, Passwoord to create account (skip if already have a login)
+		 * sign in then to chat and chat window displayed
+		 * 
+		 * Make grid or another pane to have text boxes
+		 * Implement similar code below but logic should be 
+		 * Make sign in
+		 * if (signed in = true)
+		 * 		then display chat window is crednetials correct
+		 * 
+		 * Code to get login:
+		 * Label userName = new Label("User Name:");
+		 * grid.add(userName);
+		 * Array to store username for each client
+		 * 
+		 * TextField userTextField = new TextField();
+		 * grid.add(userTextField);
+		 * 
+		 * Label pass_word = new Label("Password");
+		 * grid.add(pass_word);
+		 * Another array to store password for each client
+		 * index should be client number (so username and password match)
+		 * 
+		 * PasswordField pwBox = new PasswordField();
+		 * grid.add(pwBox);
+		 * 
+		 * Have sign in button
+		 * Button btn - new Button("Sign in");
+		 * adjust button position to preferred location
+		 * 
+		 * action to verify login and allow access to chat
 		 */
 		
 		BorderPane paneForTextField = new BorderPane(); 
