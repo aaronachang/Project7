@@ -75,6 +75,14 @@ public class ClientMain extends Application {
 		writer = new PrintWriter(sock.getOutputStream());
 		System.out.println("networking established");
 		
+		/*
+		 * Implementation of other UI Features here
+		 * Possibilities: Login with Username Password
+		 * Maybe leave button to exit chat room 
+		 * Multicoloring of different chat text
+		 * 
+		 */
+		
 		BorderPane paneForTextField = new BorderPane(); 
 		paneForTextField.setPadding(new Insets(5, 5, 5, 5)); 
 		paneForTextField.setStyle("-fx-border-color: green"); 
