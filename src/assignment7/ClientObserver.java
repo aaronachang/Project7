@@ -16,7 +16,6 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientObserver extends PrintWriter implements Observer {
 	public ClientObserver(OutputStream out) {

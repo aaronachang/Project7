@@ -10,12 +10,12 @@
  * Git URL: https://github.com/aaronachang/Project7
  * Fall 2016
  */
+
 package assignment7;
 
 import java.io.*; 
 import java.net.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javafx.application.Application; 
 import javafx.geometry.Insets; 
 import javafx.geometry.Pos; 
@@ -36,6 +36,9 @@ public class ClientMain extends Application {
 	private String sentString = "";
 	private String name = "";
 	private AtomicBoolean verified = new AtomicBoolean(false);
+	private AtomicBoolean setUpPassword = new AtomicBoolean(false);
+	private AtomicBoolean password = new AtomicBoolean(false);
+	private AtomicBoolean key = new AtomicBoolean(false);
 	
 	class IncomingReader implements Runnable {
 		public void run() {
@@ -44,12 +47,32 @@ public class ClientMain extends Application {
 				while ((message = reader.readLine()) != null) {
 					if (!verified.get()) {
 						synchronized(this){
-							if (message.substring(0, 5).contains("Name:")){
+							if (message.equals("Key locked")) {
+								incoming.appendText("Incorrect password, please try again.");
+								getUserInputs();
+							} else if (message.equals("Key unlocked")) {
+								writer.println(name + " has just joined the chat.");
+								writer.flush();
+								//outgoing.setText("");
+								//outgoing.requestFocus();
+								verified.set(true);
+								key.set(false);
+							} else if (message.length() > 27 && message.contains("Please enter the password.:")) {
+								incoming.appendText(message.substring(0, message.indexOf(':')) + "\n");
+								name = message.substring(message.indexOf(':') + 1, message.length());
+								key.set(true);
+								getUserInputs();
+							} else if (message.length() > 8 && message.contains("Password:")) {
+								name = message.substring(message.indexOf(':') + 1, message.length());
+								setUpPassword.set(true);
+								setUpPassword();
+								verified.set(true);
+							} else if (message.substring(0, 5).contains("Name:")){
 								name = message.substring(5, message.length());
 								writer.println(name + " has just joined the chat.");
 								writer.flush();
-								outgoing.setText("");
-								outgoing.requestFocus();
+//								outgoing.setText("");
+//								outgoing.requestFocus();
 								verified.set(true);
 							} else if (message.equals("User already exists, please enter a different name.")){
 								incoming.appendText(message + "\n");
@@ -58,7 +81,12 @@ public class ClientMain extends Application {
 						}
 					} else {
 						if (message.length() > 5 && (message.substring(0, 5).contains("Name:") 
-								|| message.equals("User already exists, please enter a different name."))) {} 
+								|| message.equals("Key locked")
+								|| message.equals("key:")
+								|| message.equals("Key unlocked")
+								|| message.equals("Please enter the password.:")
+								|| message.equals("Password:"))
+								|| (message.length() > 27 && message.contains("Please enter the password.:"))) {} 
 						else if (message.length() > 6 && message.charAt(message.indexOf(']') + 3) == '@') {
 							synchronized(this) {
 								if (message.substring(message.indexOf(']') + 4, message.indexOf(']') + 4 + name.length()).equals(name)) {
@@ -83,6 +111,11 @@ public class ClientMain extends Application {
 			}
 		}
 	}
+	
+	public void setUpPassword() {
+		incoming.appendText("Please enter a password. (Enter \"N\" to not set up a password)\n");
+		getUserInputs();
+	}
 
 	@Override // Override the start method in the Application class 
 	public void start(Stage stage) throws Exception { 
@@ -93,46 +126,6 @@ public class ClientMain extends Application {
 		reader = new BufferedReader(streamReader);
 		writer = new PrintWriter(sock.getOutputStream());
 		System.out.println("networking established");
-		
-		/*
-		 * Implementation of other UI Features here
-		 * Possibilities: Login with Username Password
-		 * Maybe leave button to exit chat room 
-		 * Multicoloring of different chat text
-		 * 
-		 * Pseudocode for user login:
-		 * Ideally want a login window to display first before chat window
-		 * Prompt Username, Passwoord to create account (skip if already have a login)
-		 * sign in then to chat and chat window displayed
-		 * 
-		 * Make grid or another pane to have text boxes
-		 * Implement similar code below but logic should be 
-		 * Make sign in
-		 * if (signed in = true)
-		 * 		then display chat window is crednetials correct
-		 * 
-		 * Code to get login:
-		 * Label userName = new Label("User Name:");
-		 * grid.add(userName);
-		 * Array to store username for each client
-		 * 
-		 * TextField userTextField = new TextField();
-		 * grid.add(userTextField);
-		 * 
-		 * Label pass_word = new Label("Password");
-		 * grid.add(pass_word);
-		 * Another array to store password for each client
-		 * index should be client number (so username and password match)
-		 * 
-		 * PasswordField pwBox = new PasswordField();
-		 * grid.add(pwBox);
-		 * 
-		 * Have sign in button
-		 * Button btn - new Button("Sign in");
-		 * adjust button position to preferred location
-		 * 
-		 * action to verify login and allow access to chat
-		 */
 		
 		BorderPane paneForTextField = new BorderPane(); 
 		paneForTextField.setPadding(new Insets(5, 5, 5, 5)); 
@@ -166,16 +159,35 @@ public class ClientMain extends Application {
 	
 	private void getUserInputs() {
 		outgoing.setOnAction(e -> { 
-			if (!verified.get()) {
+			if (key.get()) {
+				writer.println("key:" + outgoing.getText());
+				writer.flush();
+				outgoing.setText("");
+				outgoing.requestFocus();
+			} else if (!verified.get()) {
 				addUser();
-			} else {
-				sentString = "[" + name + "]: "+ outgoing.getText();
+			} else if (setUpPassword.get()) {
+				String decision = outgoing.getText();
+				if (decision.equals("N")) {
+					writer.println(name + " has just joined the chat.");
+				} else {
+					password.set(true);
+					writer.println("Password:" + outgoing.getText());
+				}
+				
+				writer.flush();
+				outgoing.setText("");
+				outgoing.requestFocus();
+				setUpPassword.set(false);
+			}
+			else {
+				sentString = "[" + name + "]: " + outgoing.getText();
 				writer.println(sentString);
 				writer.flush();
 				outgoing.setText("");
 				outgoing.requestFocus();
 			}
-		}); 
+		});
 	}
 	
 	private synchronized void addUser() {

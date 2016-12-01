@@ -10,21 +10,24 @@
  * Git URL: https://github.com/aaronachang/Project7
  * Fall 2016
  */
+
 package assignment7;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Observable;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ServerMain extends Observable {
+	private AtomicBoolean password = new AtomicBoolean(false);
+	private String key = "";
+	
 	public static void main(String[] args) {
 		try {
 			new ServerMain().setUpNetworking();
@@ -65,10 +68,18 @@ public class ServerMain extends Observable {
 				while ((message = reader.readLine()) != null) {
 					if (message.length() > 13 && message.substring(0, 14).contains("*adding user*")) {
 						String user = message.substring(14, message.length());
-						if (!userExists(user)) {
-							saveUser(user);
+						if (password.get()) {
 							setChanged();
-							notifyObservers("Name:" + user);
+							notifyObservers("Please enter the password.:" + user);
+						} else if (!userExists(user)) {
+							saveUser(user);
+							if (users.size() == 1) {
+								setChanged();
+								notifyObservers("Password:" + user);
+							} else {
+								setChanged();
+								notifyObservers("Name:" + user);
+							}
 						} else {
 							if (userExists(user)) {
 								setChanged();
@@ -76,6 +87,20 @@ public class ServerMain extends Observable {
 							}
 						}
 						message = "";
+					} else if (message.length() > 4 && message.substring(0, 4).contains("key:")) {
+						System.out.println("trying");
+						if (message.substring(4, message.length()).equals(key)) {
+							System.out.println("unlocked");
+							setChanged();
+							notifyObservers("Key unlocked");
+						} else {
+							System.out.println("locked");
+							setChanged();
+							notifyObservers("Key locked");
+						}
+					} else if (message.length() > 8 && message.substring(0, 8).contains("Password")) {
+						password.set(true);
+						key = message.substring(message.indexOf(':') + 1, message.length());
 					} else {
 						setChanged();
 						notifyObservers(message);
@@ -87,13 +112,7 @@ public class ServerMain extends Observable {
 			}
 		}
 	}
-	private static AtomicInteger currentClient = new AtomicInteger(0);
-	public static int getClient() {
-		return currentClient.get();
-	}
-	public static void setClient(int client) {
-		currentClient.set(client);
-	}
+
 	private static List<String> users = Collections.synchronizedList(new ArrayList<String>());
 	public static void saveUser(String user) {
 		synchronized(users) {
