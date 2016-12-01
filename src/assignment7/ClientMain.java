@@ -27,35 +27,54 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane; 
 import javafx.stage.Stage; 
 
-public class ClientMain extends Application { 
+public class ClientMain extends Application {
+	private final String IP_ADDRESS = "172.16.25.224";
 	private TextArea incoming;
 	private TextField outgoing;
 	private BufferedReader reader;
 	private PrintWriter writer;
 	private String sentString = "";
 	private String name = "";
-	private AtomicBoolean initial = new AtomicBoolean(true);
+	private AtomicBoolean verified = new AtomicBoolean(false);
 	
 	class IncomingReader implements Runnable {
 		public void run() {
 			String message;
 			try {
 				while ((message = reader.readLine()) != null) {
-					if (message.charAt(message.indexOf('>') + 2) == '@') {
-						synchronized(this) {
-							if (message.substring(message.indexOf('>') + 3, message.indexOf('>') + 3 + name.length()).equals(name)) {
-								String sender = message.substring(message.indexOf('<'), message.indexOf('>') + 1);
-								String pm = message.substring(message.indexOf('>') + 2, message.length());
-								incoming.appendText("From " + sender + ": " + pm + "\n");
-							} else if (message.equals(sentString)) {
+					if (!verified.get()) {
+						synchronized(this){
+							if (message.substring(0, 5).contains("Name:")){
+								name = message.substring(5, message.length());
+								writer.println(name + " has just joined the chat.");
+								writer.flush();
+								outgoing.setText("");
+								outgoing.requestFocus();
+								verified.set(true);
+							} else if (message.equals("User already exists, please enter a different name.")){
 								incoming.appendText(message + "\n");
+								getUserInputs();
 							}
 						}
 					} else {
-						synchronized(this){
-							incoming.appendText(message + "\n");
+						if (message.length() > 5 && (message.substring(0, 5).contains("Name:") 
+								|| message.equals("User already exists, please enter a different name."))) {} 
+						else if (message.length() > 6 && message.charAt(message.indexOf(']') + 3) == '@') {
+							synchronized(this) {
+								if (message.substring(message.indexOf(']') + 4, message.indexOf(']') + 4 + name.length()).equals(name)) {
+									String sender = message.substring(message.indexOf('['), message.indexOf(']') + 1);
+									String pm = message.substring(message.indexOf(']') + 4 + name.length(), message.length());
+									incoming.appendText("From " + sender + ":" + pm + "\n");
+								} else if (message.equals(sentString)) {
+									incoming.appendText(message + "\n");
+								}
+							} 
+						} else {
+							synchronized(this){
+								incoming.appendText(message + "\n");
+							}
 						}
-					}
+					 }
 					sentString = "";
 				}
 			} catch (IOException ex) {
@@ -69,7 +88,7 @@ public class ClientMain extends Application {
 	public void start(Stage stage) throws Exception { 
 		// Panel p to hold the label and text field 
 		@SuppressWarnings("resource")
-		Socket sock = new Socket("127.0.0.1", 4242);
+		Socket sock = new Socket(IP_ADDRESS, 4242);
 		InputStreamReader streamReader = new InputStreamReader(sock.getInputStream());
 		reader = new BufferedReader(streamReader);
 		writer = new PrintWriter(sock.getOutputStream());
@@ -137,23 +156,34 @@ public class ClientMain extends Application {
 		//this.stage = stage;
 		stage.show(); // Display the stage 
 		
-		incoming.setText("Enter a Username in the chat line above.\n");
+		incoming.setText("Enter a username in the chat line above.\n");
 
 		Thread readerThread = new Thread(new IncomingReader());
 		readerThread.start();
-
+		
+		getUserInputs();
+	}
+	
+	private void getUserInputs() {
 		outgoing.setOnAction(e -> { 
-			if (initial.getAndSet(false)) {
-				name = outgoing.getText();
-				sentString = name + " just joined the chat room.";
+			if (!verified.get()) {
+				addUser();
 			} else {
 				sentString = "[" + name + "]: "+ outgoing.getText();
+				writer.println(sentString);
+				writer.flush();
+				outgoing.setText("");
+				outgoing.requestFocus();
 			}
-			writer.println(sentString);
-			writer.flush();
-			outgoing.setText("");
-			outgoing.requestFocus();
 		}); 
+	}
+	
+	private synchronized void addUser() {
+		String unverified = outgoing.getText();
+		writer.println("*adding user* " + unverified);
+		writer.flush();
+		outgoing.setText("");
+		outgoing.requestFocus();
 	}
 	
 	public static void main(String[] args) {

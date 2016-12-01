@@ -18,6 +18,9 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Observable;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -60,9 +63,23 @@ public class ServerMain extends Observable {
 			String message;
 			try {
 				while ((message = reader.readLine()) != null) {
-					//System.out.println("server read "+message);
-					setChanged();
-					notifyObservers(message);
+					if (message.length() > 13 && message.substring(0, 14).contains("*adding user*")) {
+						String user = message.substring(14, message.length());
+						if (!userExists(user)) {
+							saveUser(user);
+							setChanged();
+							notifyObservers("Name:" + user);
+						} else {
+							if (userExists(user)) {
+								setChanged();
+								notifyObservers("User already exists, please enter a different name.");
+							}
+						}
+						message = "";
+					} else {
+						setChanged();
+						notifyObservers(message);
+					}
 				}
 			} catch (IOException e) {
 				//System.exit(0);
@@ -72,11 +89,18 @@ public class ServerMain extends Observable {
 	}
 	private static AtomicInteger currentClient = new AtomicInteger(0);
 	public static int getClient() {
-		System.out.println("get" + currentClient);
 		return currentClient.get();
 	}
 	public static void setClient(int client) {
 		currentClient.set(client);
-		System.out.println("set" + client);
+	}
+	private static List<String> users = Collections.synchronizedList(new ArrayList<String>());
+	public static void saveUser(String user) {
+		synchronized(users) {
+			users.add(user);
+		}
+	}
+	public static synchronized boolean userExists(String user) {
+		return users.contains(user);
 	}
 }
